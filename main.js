@@ -12,6 +12,22 @@ const INSTRUMENTS = [
 ];
 const NOTE_NAMES = ['Do', 'Do♯', 'Re', 'Re♯', 'Mi', 'Fa', 'Fa♯', 'Sol', 'Sol♯', 'La', 'La♯', 'Si'];
 const NOTE_KEYS = ['A', 'W', 'S', 'E', 'D', 'F', 'T', 'G', 'Y', 'H', 'U', 'J'];
+const GUITAR_TUNING = [40, 45, 50, 55, 59, 64]; // E2 A2 D3 G3 B3 E4, standard tuning
+const GUITAR_STRING_KEYS = ['Q', 'W', 'E', 'R', 'T', 'Y']; // high e to low E, as displayed
+const GUITAR_CHORDS = [
+  { name: 'C', key: '1', frets: [-1, 3, 2, 0, 1, 0] },
+  { name: 'G', key: '2', frets: [3, 2, 0, 0, 0, 3] },
+  { name: 'Am', key: '3', frets: [-1, 0, 2, 2, 1, 0] },
+  { name: 'F', key: '4', frets: [1, 3, 3, 2, 1, 1] },
+  { name: 'Em', key: '5', frets: [0, 2, 2, 0, 0, 0] },
+  { name: 'D', key: '6', frets: [-1, -1, 0, 2, 3, 2] },
+  { name: 'Dm', key: '7', frets: [-1, -1, 0, 2, 3, 1] },
+  { name: 'E', key: '8', frets: [0, 2, 2, 1, 0, 0] },
+  { name: 'A', key: '9', frets: [-1, 0, 2, 2, 2, 0] },
+  { name: 'A7', key: '0', frets: [-1, 0, 2, 0, 2, 0] },
+  { name: 'D7', key: '-', frets: [-1, -1, 0, 2, 1, 2] },
+  { name: 'G7', key: '=', frets: [3, 2, 0, 0, 0, 1] },
+];
 const START_MIDI = 48;
 const PIANO_START_MIDI = 21;
 const PIANO_END_MIDI = 108;
@@ -182,10 +198,30 @@ function PianoKeyboard({ octave, setOctave, activeNotes, setActiveNotes, playNot
   </div>`;
 }
 
+function GuitarView({ activeChord, playChord, playSampleOrSynth, volume }) {
+  const stringNames = ['Mi', 'Si', 'Sol', 'Re', 'La', 'Mi'];
+  return html`<div className="guitar-view">
+    <div className="chord-row" role="group" aria-label="Gitar akorları">
+      ${GUITAR_CHORDS.map((chord) => html`<button className=${`chord-button ${activeChord === chord.name ? 'active' : ''}`} onClick=${() => playChord(chord)} aria-label=${`${chord.name} akoru, ${chord.key} tuşu ile çal`} key=${chord.name}>
+        <span>${chord.name}</span><small><kbd>${chord.key}</kbd></small>
+        <span className="chord-diagram" aria-hidden="true">
+          <span className="chord-markers">${chord.frets.slice().reverse().map((fret, index) => html`<i key=${index}>${fret === -1 ? '×' : fret === 0 ? '○' : ''}</i>`)}</span>
+          <span className="fretboard">${chord.frets.slice().reverse().map((fret, index) => html`<i className="fret-string" key=${index}>${fret > 0 && fret <= 4 ? html`<b style=${{ top: `${(fret - 0.5) * 25}%` }}></b>` : null}</i>`)}</span>
+        </span>
+      </button>`)}
+    </div>
+    <div className="guitar-strings" role="group" aria-label="Açık gitar telleri">
+      ${GUITAR_STRING_KEYS.map((key, index) => html`<button className="string-button" onPointerDown=${() => playSampleOrSynth('guitar-acoustic', GUITAR_TUNING[5 - index], volume / 100)} aria-label=${`Gitar ${6 - index}. tel, ${stringNames[index]}, klavye ${key} tuşu`} key=${index}><span className="string-line" style=${{ height: `${1 + index * 0.55}px` }}></span><span>${stringNames[index]} <kbd>${key}</kbd></span></button>`)}
+    </div>
+    <div className="drum-hint">Akorlar: <kbd>1</kbd>–<kbd>0</kbd> <kbd>-</kbd> <kbd>=</kbd> · Açık teller: <kbd>Q</kbd> <kbd>W</kbd> <kbd>E</kbd> <kbd>R</kbd> <kbd>T</kbd> <kbd>Y</kbd></div>
+  </div>`;
+}
+
 function App() {
   const [instrument, setInstrument] = useState('piano');
   const [activeNotes, setActiveNotes] = useState([]);
   const [activeDrum, setActiveDrum] = useState('');
+  const [activeChord, setActiveChord] = useState('');
   const [volume, setVolume] = useState(75);
   const [octave, setOctave] = useState(4);
   const [tempo, setTempo] = useState(96);
@@ -209,7 +245,15 @@ function App() {
   const playDrumPad = (kind) => {
     setActiveDrum(kind); window.setTimeout(() => setActiveDrum(''), 140); playDrum(kind, volume / 100);
   };
-  const playChord = (notes) => notes.forEach((midi, index) => window.setTimeout(() => playSampleOrSynth('guitar-acoustic', midi, volume / 100), index * 24));
+  const playChord = (chord) => {
+    setActiveChord(chord.name);
+    window.setTimeout(() => setActiveChord((current) => current === chord.name ? '' : current), 260);
+    chord.frets.forEach((fret, stringIndex) => {
+      if (fret < 0) return;
+      const midi = GUITAR_TUNING[stringIndex] + fret;
+      window.setTimeout(() => playSampleOrSynth('guitar-acoustic', midi, volume / 100), stringIndex * 22);
+    });
+  };
 
   useEffect(() => {
     const onDown = (event) => {
@@ -218,6 +262,13 @@ function App() {
       if (instrument === 'drums') {
         const drums = { A: 'kick', S: 'snare', D: 'hat' };
         if (drums[key]) playDrumPad(drums[key]);
+        return;
+      }
+      if (instrument === 'guitar-acoustic') {
+        const chord = GUITAR_CHORDS.find((item) => item.key === key);
+        if (chord) { playChord(chord); return; }
+        const stringIndex = GUITAR_STRING_KEYS.indexOf(key);
+        if (stringIndex !== -1) { playSampleOrSynth('guitar-acoustic', GUITAR_TUNING[5 - stringIndex], volume / 100); return; }
         return;
       }
       const index = NOTE_KEYS.indexOf(key);
@@ -265,7 +316,7 @@ function App() {
         <div className="instrument-card">
           <div className="instrument-info"><div className=${`instrument-icon ${currentInstrument.color}`}><${Icon} name=${currentInstrument.icon} size=${25}/></div><div><h3>${currentInstrument.name}</h3><p>${currentInstrument.subtitle}</p></div><span className=${`sound-status ${instrument === 'drums' || audioStatus[instrument] === 'ready' ? 'ready' : audioStatus[instrument] === 'loading' ? 'loading' : 'fallback'}`}><i></i>${instrument === 'drums' ? 'Hazır' : audioStatus[instrument] === 'ready' ? `${sampleCounts[instrument]} örnek hazır` : audioStatus[instrument] === 'loading' ? 'Sesler yükleniyor' : 'Çevrimdışı ses'}</span></div>
           <div className="instrument-content">
-            ${instrument === 'drums' ? html`<div className="drum-view"><div className="drum-pad-row">${[['kick', 'Bas davul', 'KICK', 'kick-pad'], ['snare', 'Trampet', 'SNARE', 'snare-pad'], ['hat', 'Hi-hat', 'HI-HAT', 'hat-pad']].map(([id, label, short, color]) => html`<button className=${`drum-pad ${color} ${activeDrum === id ? 'hit' : ''}`} onPointerDown=${() => playDrumPad(id)} key=${id}><span className="pad-shape">${id === 'kick' ? '●' : id === 'snare' ? '◉' : '✳'}</span><span className="pad-name">${label}</span><span className="pad-key">${id === 'kick' ? 'A' : id === 'snare' ? 'S' : 'D'}</span></button>`)}</div><div className="drum-hint">Pedlere dokun veya klavyende <kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> tuşlarını kullan</div></div>` : instrument === 'guitar-acoustic' ? html`<div className="guitar-view"><div className="chord-row">${[['C', [48, 52, 55, 60]], ['G', [43, 47, 50, 55]], ['Am', [45, 48, 52, 57]], ['F', [41, 45, 48, 53]], ['Em', [40, 47, 52, 55]]].map(([chord, notes]) => html`<button className="chord-button" onClick=${() => playChord(notes)} key=${chord}><span>${chord}</span><small>AKOR</small></button>`)}</div><div className="guitar-strings">${[0, 1, 2, 3, 4, 5].map((index) => html`<button className="string-button" onPointerDown=${() => playSampleOrSynth('guitar-acoustic', [64, 59, 55, 50, 45, 40][index], volume / 100)} aria-label=${`Gitar ${6 - index}. tel`} key=${index}><span className="string-line" style=${{ height: `${1 + index * 0.55}px` }}></span><span>${['Mi', 'Si', 'Sol', 'Re', 'La', 'Mi'][index]}</span></button>`)}</div><div className="drum-hint">Bir akor seç veya telleri çekiştir</div></div>` : html`<${PianoKeyboard} octave=${octave} setOctave=${setOctave} activeNotes=${activeNotes} setActiveNotes=${setActiveNotes} playNote=${playNote}/>`}
+            ${instrument === 'drums' ? html`<div className="drum-view"><div className="drum-pad-row">${[['kick', 'Bas davul', 'KICK', 'kick-pad'], ['snare', 'Trampet', 'SNARE', 'snare-pad'], ['hat', 'Hi-hat', 'HI-HAT', 'hat-pad']].map(([id, label, short, color]) => html`<button className=${`drum-pad ${color} ${activeDrum === id ? 'hit' : ''}`} onPointerDown=${() => playDrumPad(id)} key=${id}><span className="pad-shape">${id === 'kick' ? '●' : id === 'snare' ? '◉' : '✳'}</span><span className="pad-name">${label}</span><span className="pad-key">${id === 'kick' ? 'A' : id === 'snare' ? 'S' : 'D'}</span></button>`)}</div><div className="drum-hint">Pedlere dokun veya klavyende <kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> tuşlarını kullan</div></div>` : instrument === 'guitar-acoustic' ? html`<${GuitarView} activeChord=${activeChord} playChord=${playChord} playSampleOrSynth=${playSampleOrSynth} volume=${volume}/>` : html`<${PianoKeyboard} octave=${octave} setOctave=${setOctave} activeNotes=${activeNotes} setActiveNotes=${setActiveNotes} playNote=${playNote}/>`}
           </div>
         </div>
       </section>
