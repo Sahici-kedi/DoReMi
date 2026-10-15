@@ -9,7 +9,7 @@ Klasörde herhangi bir statik dosya sunucusu çalıştırabilirsin. Örneğin VS
 ## Kullanım
 
 - Üst menüden piyano, davul veya akustik gitarı seç.
-- Piyanoyu ekrandaki tuşlarla veya A–J ve W/E/T/Y/U klavye kısayollarıyla çal; oktavı değiştir.
+- Piyanoyu ekrandaki 88 tuşla (A0–C8) veya A–J ve W/E/T/Y/U klavye kısayollarıyla çal. Klavyeyi yatay kaydır; bilgisayar kısayolları için oktavı değiştir.
 - Davul pedlerine dokun veya A/S/D tuşlarını kullan.
 - Gitarda akor düğmelerine veya tellere dokun.
 - Adım dizicisindeki kutulara basıp ritim oluştur; “Ritmi çal” ile başlat. Tempo düğmesi her dokunuşta 8 BPM artırır, 140 BPM’den sonra 70 BPM’ye döner.
