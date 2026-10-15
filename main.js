@@ -211,7 +211,7 @@ function GuitarView({ activeChord, playChord, playSampleOrSynth, volume }) {
       </button>`)}
     </div>
     <div className="guitar-strings" role="group" aria-label="Açık gitar telleri">
-      ${GUITAR_STRING_KEYS.map((key, index) => html`<button className="string-button" onPointerDown=${() => playSampleOrSynth('guitar-acoustic', GUITAR_TUNING[5 - index], volume / 100)} aria-label=${`Gitar ${6 - index}. tel, ${stringNames[index]}, klavye ${key} tuşu`} key=${index}><span className="string-line" style=${{ height: `${1 + index * 0.55}px` }}></span><span>${stringNames[index]} <kbd>${key}</kbd></span></button>`)}
+      ${GUITAR_STRING_KEYS.map((key, index) => html`<button className="string-button" onPointerDown=${() => playSampleOrSynth('guitar-acoustic', GUITAR_TUNING[5 - index], volume / 100)} aria-label=${`Gitar ${index + 1}. tel, ${stringNames[index]}, klavye ${key} tuşu`} key=${index}><span className="string-line" style=${{ height: `${1 + index * 0.55}px` }}></span><span>${stringNames[index]} <kbd>${key}</kbd></span></button>`)}
     </div>
     <div className="drum-hint">Akorlar: <kbd>1</kbd>–<kbd>0</kbd> <kbd>-</kbd> <kbd>=</kbd> · Açık teller: <kbd>Q</kbd> <kbd>W</kbd> <kbd>E</kbd> <kbd>R</kbd> <kbd>T</kbd> <kbd>Y</kbd></div>
   </div>`;
